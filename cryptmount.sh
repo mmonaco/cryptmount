@@ -2,6 +2,7 @@
 
 SHORTOPTS="LMUc:w:nqvho:O:"
 DEPS="cryptsetup blkid findmnt mkswap mktemp"
+UDEVRUNNING=0
 
 LOGLEVEL=1
 DRYRUN=0
@@ -139,6 +140,14 @@ ct_main() {
 	for dep in $DEPS; do
 		type $dep &> /dev/null || info "$dep not found, some functionality may fail"
 	done
+
+	# Check for UDEV
+	if pidof udevd &>/dev/null; then
+		UDEVRUNNING=1
+		info "Detected udevd"
+	else
+		info "udevd not running, or unable to detect it: waiting for devices disabled"
+	fi
 
 	if [ -z "$action" -o "$action" = "list" ]; then
 
