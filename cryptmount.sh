@@ -335,6 +335,72 @@ ct_unmap() {
 	fi
 }
 
+ct_map() {
+
+<<<<<<< HEAD
+	local name="$1" dev="$2" key="$3" args="" swap=0
+	shift 3
+
+	if [ -e "/dev/mapper/$name" ]; then
+		error "Volume is already mapped ('/dev/mapper/$name' exists')"
+		return 1
+	fi
+
+	# this function sets the args and swap variables
+	if ! ct_parse_options "$@"; then
+		error "Unable to parse options"
+		return 1
+	fi
+	args="$args $OPTIONS"
+
+	# resolve the encrypted device, can't do much without this
+	if ! dev="$(ct_resolve_device "$dev")"; then
+		error "device '$dev' not found"
+		return 1
+	fi
+
+	if [ "$key" ]; then
+		key="--key-file=\"$key\""
+	fi
+
+	local ret=0
+
+	# the main event, run cryptsetup (and mkswap, mkfs if necessary)
+	if cryptsetup isLuks "$dev"; then
+
+		info "device '$dev' detected as LUKS"
+
+		if run cryptsetup luksOpen $key $args "$dev" "$name"; then
+			info "sucessfully mapped '$dev' to '/dev/mapper/$name'"
+		else
+			error "unable to map '$dev' to '/dev/mapper/$name'"
+			ret=1
+		fi
+
+	else
+
+		info "device '$dev' assumed to be plain"
+
+		if run cryptsetup create $key $args "$name" "$dev"; then
+			info "sucessfully mapped '$dev' to '/dev/mapper/$name'"
+			if [ $swap -eq 1 ]; then
+				if run mkswap -f -L "$name" "/dev/mapper/$name"; then
+					info "mkswap successful on '/dev/mapper/$name'"
+				else
+					error "mkswap failed for '/dev/mapper/$name'"
+					ret=1
+				fi
+			fi
+		else
+			error "unable to map '$dev' to '/dev/maper/name/$name'"
+			ret=1
+		fi
+
+	fi
+
+	return $ret
+}
+
 ct_resolve_device() {
 
 	local tmp="" device="$1" seconds=$WAITTIME tag tagval
