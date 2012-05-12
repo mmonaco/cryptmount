@@ -50,6 +50,46 @@ __EOF__
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
 #                                                                              #
+# Utilities                                                                    #
+#                                                                              #
+
+error() {
+	[ $LOGLEVEL -ge 0 ] && printf "E: %s\n" "$*" >&2 || true
+}
+
+die() {
+	printf "E: %s\n" "$*" >&2
+	exit ${1:-1}
+}
+
+warn() {
+	[ $LOGLEVEL -ge 1 ] && printf "W: %s\n" "$*" >&2 || true
+}
+
+msg() {
+	[ $LOGLEVEL -ge 1 ] && printf "M: %s\n" "$*" >&2 || true
+}
+
+info() {
+	[ $LOGLEVEL -ge 2 ] && printf "I: %s\n" "$*" >&2 || true
+}
+
+run() {
+	[ $LOGLEVEL -ge 2 ] && printf "R: %s\n" "$*" >&2
+	if [ $DRYRUN -eq 1 ]; then
+		true
+	else
+		"$@"
+	fi
+}
+
+trim() {
+	local IFS=$' \t\n'
+	echo -n $*
+}
+
+# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+#                                                                              #
 # Main functions                                                               #
 #                                                                              #
 
