@@ -324,6 +324,41 @@ ct_unmap() {
 	fi
 }
 
+ct_resolve_device() {
+
+	local tmp="" device="$1" seconds=$WAITTIME tag tagval
+
+	case "$device" in
+		UUID=*|PARTUUID=*|LABEL=*)
+			tmp="$(blkid -l -o device -t "$device")"
+			if [ -z "$tmp" ]; then
+				if [ $UDEVRUNNING -eq 1 ]; then
+					tag="$(awk -v t="${device%%=*}" 'BEGIN { print tolower(t) }')"
+					tagval="${device#*=}"
+					device="/dev/disk/by-$tag/$tagval"
+				fi
+			else
+				device="$tmp"
+			fi
+	esac
+
+	if [ ! -e "$device" -a "${device:0:5}" = "/dev/" -a "$UDEVRUNNING" -eq 1 ]; then
+		msg "Waiting $seconds seconds for '$device'..."
+		until [ -e "$device" -o $seconds -eq 0 ]; do
+			sleep 1
+			seconds=$(( seconds - 1 ))
+		done
+	fi
+
+	printf "%s" "$device"
+
+	if [ -e "$device" ]; then
+		info "resolve: found '$device'"
+	else
+		error "resolve: unable to find '$device'"
+		return 1
+	fi
+}
 #                                                                              #
 # ---------------------------------------------------------------------------- #
 
