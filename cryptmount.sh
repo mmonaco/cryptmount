@@ -151,7 +151,13 @@ ct_main() {
 
 	elif [ "$action" = "unmap" ]; then
 
-		:
+		if [ $# -gt 0 ]; then
+			[ "$FILTER" != "!noauto" ] && \
+				info "Filters from -O are ignored in this mode"
+			unset FILTER
+		fi
+
+		ct_main_unmap "$@"
 
 	elif [ "$action" = "map" ]; then
 
@@ -161,6 +167,25 @@ ct_main() {
 
 		error "Internal error: no action"
 		false
+
+	fi
+}
+
+ct_main_unmap() {
+
+	if [ $# -eq 0 ]; then
+
+		ct_read_crypttab ct_unmap
+
+	else
+
+		local vol ret=0
+
+		for vol in "$@"; do
+			ct_unmap "$vol" || ret=$(( ret+1 ))
+		done
+
+		return $ret
 
 	fi
 }
@@ -271,6 +296,23 @@ ct_check_filter() {
 	done
 
 	return 0
+}
+
+# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+#                                                                              #
+#  Mapping, unmapping, finding stuff                                           #
+#                                                                              #
+
+ct_unmap() {
+	local name="$1"
+	if [ ! -e "/dev/mapper/$name" ]; then
+		warn "Volume was not mapped (no '/dev/mapper/$name')"
+	elif run cryptsetup remove "$name"; then
+		info "$name unmapped"
+	else
+		error "failed to unmap $name"
+		false
+	fi
 }
 
 #                                                                              #
