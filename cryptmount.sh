@@ -142,7 +142,12 @@ ct_main() {
 
 	if [ -z "$action" -o "$action" = "list" ]; then
 
-		:
+		if [ $# -ne 0 ]; then
+			warn "With -L, volumes given on the command line have no effect"
+		fi
+
+		list_func() { printf "%s\n" "$1"; }
+		ct_read_crypttab list_func
 
 	elif [ "$action" = "unmap" ]; then
 
