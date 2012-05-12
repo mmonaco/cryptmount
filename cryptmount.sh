@@ -185,7 +185,13 @@ ct_main() {
 
 	elif [ "$action" = "map" ]; then
 
-		:
+		if [ $# -ne 0 ]; then
+			[ "$FILTER" != "!noauto" ] && \
+				info "Filters from -O are ignored in this mode"
+			unset FILTER
+		fi
+
+		ct_main_map "$@"
 
 	else
 
@@ -214,6 +220,42 @@ ct_main_unmap() {
 	fi
 }
 
+ct_main_map() {
+
+	if [ $# -eq 0 ]; then
+
+		ct_read_crypttab ct_map
+
+	elif [ $# -eq 1 ]; then
+
+		local vol _tmp="$1"
+
+		find_func() {
+			if [ "$1" = "$_tmp" -o "$2" = "$_tmp" ]; then
+				printf "%s" "$*"
+			else
+				false
+			fi
+		}
+
+		if vol="$(ct_read_crypttab -1 find_func)"; then
+			ct_map $vol
+		else
+			error "Unable to find '$_tmp' in '$CRYPTTAB'"
+			false
+		fi
+
+	elif [ $# -le 3 ]; then
+
+		ct_map "$@"
+
+	else
+
+		error "Too many options given for -M"
+		ct_print_usage 1
+
+	fi
+}
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
 #                                                                              #
