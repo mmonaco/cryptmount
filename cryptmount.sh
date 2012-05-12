@@ -1,6 +1,7 @@
 #!/bin/sh
 
 SHORTOPTS="LMUc:w:nqvho:O:"
+DEPS="cryptsetup blkid findmnt mkswap mktemp"
 
 LOGLEVEL=1
 DRYRUN=0
@@ -133,6 +134,11 @@ ct_main() {
 	done
 
 	shift $(( OPTIND - 1 ))
+
+	# Warn if any of the dependencies are missing
+	for dep in $DEPS; do
+		type $dep &> /dev/null || info "$dep not found, some functionality may fail"
+	done
 
 	if [ -z "$action" -o "$action" = "list" ]; then
 
