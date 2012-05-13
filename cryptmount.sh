@@ -155,7 +155,7 @@ ct_main() {
 
 	# Pre-parse OPTIONS, a little ugly, but it works
 	preparse() {
-		local args swap
+		local args tmpfs
 		if ! ct_parse_options $OPTIONS; then
 			error "Invalid options string: $OPTIONS"
 			exit 1
@@ -392,7 +392,7 @@ ct_unmap() {
 
 ct_map() {
 
-	local name="$1" dev="$2" key="$3" args="" swap=0
+	local name="$1" dev="$2" key="$3" args="" tmpfs
 	local key_dev="" key_fstype="" key_mntpnt="" key_dev_umount=0
 	shift 3
 
@@ -401,7 +401,7 @@ ct_map() {
 		return 1
 	fi
 
-	# this function sets the args and swap variables
+	# this function sets the args and tmpfs variables
 	if ! ct_parse_options "$@"; then
 		error "Unable to parse options"
 		return 1
@@ -520,11 +520,18 @@ ct_map() {
 			ret=1
 		elif run cryptsetup create $key $args "$name" "$dev"; then
 			info "sucessfully mapped '$dev' to '/dev/mapper/$name'"
-			if [ $swap -eq 1 ]; then
+			if [ "$tmpfs" = "swap" ]; then
 				if run mkswap -f -L "$name" "/dev/mapper/$name"; then
 					info "mkswap successful on '/dev/mapper/$name'"
 				else
 					error "mkswap failed for '/dev/mapper/$name'"
+					ret=1
+				fi
+			elif [ "$tmpfs" ]; then
+				if run mkfs -t "$tmpfs" "/dev/mapper/$name"; then
+					info "mkfs successful on '/dev/mapper/$name'"
+				else
+					error "mkfs failed for '/dev/mapper/$name'"
 					ret=1
 				fi
 			fi
@@ -617,7 +624,7 @@ ct_parse_options() {
 		case "$key" in
 			swap)
 				# set external variable
-				swap=1
+				tmpfs="swap"
 				;;
 			luks|plain)
 				warn "Ignoring option $key, LUKS volumes are automatically detected"
@@ -629,7 +636,9 @@ ct_parse_options() {
 				warn "Ignoring Debian specific option '$key'"
 				;;
 			tmp)
-				warn "The tmp= option is not supported"
+				# set an external variable
+				[ -z "$val" ] && msg "Defaulting tmp to ext4"
+				tmpfs="${val:-ext4}"
 				;;
 			size)
 				args="$args --key-size $val"
