@@ -1,6 +1,6 @@
 #!/bin/sh
 
-SHORTOPTS="LMUc:w:nqvho:O:"
+SHORTOPTS="LMUc:fw:nqvho:O:"
 DEPS="cryptsetup blkid findmnt mkswap mktemp"
 UDEVRUNNING=0
 
@@ -10,6 +10,7 @@ WAITTIME=10
 CRYPTTAB=/etc/crypttab
 OPTIONS=
 FILTER="!noauto"
+FORCE=0
 
 ct_print_usage() {
 	cat <<__EOF__
@@ -32,6 +33,8 @@ usage: $0 [OPTIONS] [-L]
 
   options:
     -c FILE  set the crypttab location (default: /etc/crypttab)
+    -f       force destructive operations even when a block device appears to
+             contain data
     -w NUM   wait time (seconds) for a device if it is not already available
     -n       dry run
     -q       decrease verbosity
@@ -115,6 +118,7 @@ ct_main() {
 			M) set_action map;;
 			U) set_action unmap;;
 			c) CRYPTTAB="$OPTARG";;
+			f) FORCE=1;;
 			w) WAITTIME=${OPTARG//[!0-9]};;
 			n) DRYRUN=1;;
 			q) LOGLEVEL=$(( LOGLEVEL - 1 ));;
@@ -381,7 +385,14 @@ ct_map() {
 
 		info "device '$dev' assumed to be plain"
 
-		if run cryptsetup create $key $args "$name" "$dev"; then
+		# cryptsetup 'create' can be destructive, don't do it if blkid can
+		# identify the device type
+		if [ $FORCE -ne 1 ] && blkid -p "$dev" &>/dev/null; then
+			error "Refusing to call 'cryptsetup create' on device that might"
+			error " have data. If you are sure this is what you want, use"
+			error " the -f option"
+			ret=1
+		elif run cryptsetup create $key $args "$name" "$dev"; then
 			info "sucessfully mapped '$dev' to '/dev/mapper/$name'"
 			if [ $swap -eq 1 ]; then
 				if run mkswap -f -L "$name" "/dev/mapper/$name"; then
