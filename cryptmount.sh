@@ -203,6 +203,9 @@ ct_read_crypttab() {
 			-|none|"")
 				key=-
 				;;
+			/dev/random|/dev/urandom)
+				options="$options,%random"
+				;;
 			/*|UUID=*|PARTUUID=*|LABEL=*)
 				:
 				;;
