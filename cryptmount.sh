@@ -160,6 +160,111 @@ ct_main() {
 	fi
 }
 
+
+# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
+#                                                                              #
+# Functions for iterating over crypttab                                        #
+#                                                                              #
+
+ct_read_crypttab() {
+
+	if [ ! -f "$CRYPTTAB" -o ! -r "$CRYPTTAB" ]; then
+		error "cannot read $CRYPTTAB"
+		return 1
+	fi
+
+	local func="$@" line lineno=0 name dev key options ret=0 adhoc=0
+
+	if [ "$1" = "-1" ]; then
+		adhoc=1
+		shift
+		func="$@"
+	fi
+
+	while read -r name dev key options <&3; do
+
+		lineno=$(( lineno + 1 ))
+		[ -z "$name" ] || [ ${name:0:1} = "#" ] && continue
+
+		# unescape devname and keyname
+		name=$(printf '%b' "$name")
+		dev=$(printf '%b' "$dev")
+		key=$(printf '%b' "$key")
+
+		if [ -z "$name" ]; then
+			warn "$CRYPTTAB:$lineno: the name (first column) cannot be blank"
+			continue
+		elif [ -z "$dev" ]; then
+			warn "$CRYPTTAB:$lineno: the device (second column) cannot be blank"
+			continue
+		fi
+
+		case $key in
+			-|none|"")
+				key=-
+				;;
+			/*|UUID=*|PARTUUID=*|LABEL=*)
+				:
+				;;
+			*)
+				warn "$CRYPTTAB:$lineno: plain text keys are not supported"
+				key=-
+				;;
+		esac
+
+		if ct_check_filter $options; then
+			if ! $func "$name" "$dev" "$key" $options; then
+				ret=$(( ret + 1 ))
+			elif [ $adhoc -eq 1 ]; then
+				ret=0
+				break
+			fi
+		fi
+
+	done 3< "$CRYPTTAB"
+
+	return $ret
+}
+
+ct_check_filter() {
+
+	local IFS=$',' fltr opt
+
+	for fltr in $FILTER; do
+		fltr="$(trim $fltr)"
+		[ -z "$fltr" ] && continue
+
+		if [ "x${fltr:0:1}" != "x!" ]; then
+
+			for opt in $*; do
+				opt="$(trim $opt)"
+				[ -z "$opt" ] && continue
+
+				if [ "$fltr" = "$opt" -o "$fltr" = "${opt%%=*}" ]; then
+					continue 2
+				fi
+			done
+
+			return 1
+
+		else
+
+			for opt in $*; do
+				opt="$(trim $opt)"
+				[ -z "$opt" ] && continue
+
+				if [ "$fltr" = "!$opt" -o "$fltr" = "!${opt%%=*}" ]; then
+					return 1
+				fi
+			done
+
+		fi
+
+	done
+
+	return 0
+}
+
 #                                                                              #
 # ---------------------------------------------------------------------------- #
 
