@@ -6,3 +6,8 @@
 cryptmount
 *.8
 *.5
+
+# Arch Linux Files
+archlinux/src
+archlinux/pkg
+archlinux/*.tar.*

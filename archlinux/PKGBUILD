@@ -1,0 +1,25 @@
+
+pkgname=cryptmount
+pkgver=$(date +%Y%m%d)
+pkgrel=1
+pkgdesc="Standardized crypttab handler for cryptsetup"
+arch=('any')
+url="https://github.com/mmonaco/cryptmount"
+license=('GPL')
+depends=('cryptsetup')
+makedepends=('asciidoc')
+
+source=()
+md5sums=()
+
+build() {
+	cd "$startdir"
+	make -C ../ all
+}
+
+package() {
+	cd "$startdir"
+	make -C ../ DESTDIR="$pkgdir" PREFIX="/usr" install install_hook
+}
+
+# vim: set noet :
