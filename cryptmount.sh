@@ -302,6 +302,15 @@ ct_read_crypttab() {
 			/dev/random|/dev/urandom)
 				options="$options,%random"
 				;;
+			ASK)
+				info "$CRYPTTAB:$lineno: ASK is a deprecated key, please use '-' or 'none'"
+				key=-
+				;;
+			SWAP)
+				info "$CRYPTTAB:$lineno: SWAP is a deprecated key, please use '/dev/urandom' and the 'swap' option"
+				key="/dev/urandom"
+				options="$options,swap,%random"
+				;;
 			/*|UUID=*|PARTUUID=*|LABEL=*)
 				:
 				;;
