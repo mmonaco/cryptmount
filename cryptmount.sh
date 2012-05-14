@@ -421,6 +421,18 @@ ct_map() {
 			key="${key#*:}"
 			key_fstype="${key%%:*}"
 			key="${key#*:}"
+			case "$key_fstype" in
+				*[!0-9]*)
+					:;;
+				*)
+					warn "<dev>:<offset>:<length> is a deprecated key format. Please use"
+					warn " the keyfile-offset and keyfile-size options instead. This"
+					warn " format will *soon* be removed from cryptmount/crypttab!"
+					opts="$opts --keyfile-offset=$key_fstype --keyfile-size=$key"
+					key="$key_dev"
+					unset key_fstype
+					unset key_dev
+			esac
 			;;
 		*:*)
 			key_dev="${key%%:*}"
