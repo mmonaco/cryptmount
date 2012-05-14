@@ -1,0 +1,121 @@
+////
+vim:set ft=asciidoc noet tw=72:
+////
+cryptmount(8)
+=============
+
+Name
+----
+cryptmount - parse *crypttab* for use by *cryptsetup*
+
+Synopsis
+--------
+*cryptmount* ['options'] [*-L*]
+
+*cryptmount* ['options'] *-M* ['name'|'device']
+
+*cryptmount* ['options'] *-M* 'name' 'device' ['key']
+
+*cryptmount* ['options'] *-U* ['name'[*,*...]]
+
+Description
+-----------
+
+*cryptmount* uses *crypttab(5)* for calling *cryptsetup(8)*; it can also
+be used to define a 'volume' on the command line without *crypttab*.
+
+Actions
+-------
+
+*-L*::
+
+List the 'names' (first column) of 'volumes' from *crypttab*. Use with
+*-O* to manipulate which 'names' are listed.
+
+*-M*::
+
+Perform a mapping. The first form of this command finds a 'volume' from
+*crypttab* either by its 'name' or 'device', or if nothing is given then
+map all 'volumes' (use with *-O* to manipulate which 'volumes' are
+mapped). The second form defines a 'volume' entirely on the command
+line, *crypttab* is not used.
+
+*-U*::
+
+Unmap 'volume(s)'. If a list of 'names' is given, unmap them. Otherwise
+unmap all 'volumes' from *crypttab* (with *-O* to manipulate which
+'volumes' are unmapped).
+
+Options
+-------
+
+*-c* 'file'::
+
+Override the default *crypttab* location.
+
+*-f*::
+
+Force potentially destructive mappings. For plain mappings (which are
+used with the *swap* and *tmp* options), there is a lot of potential to
+accidentally lose data. Because of this, *cryptmount* performs a check
+with *blkid(8)* to see if there is anything identifiable on 'device'.
+Use *-f* to bypass this check.
+
+*-w* 'num'::
+
+Time (in seconds) to wait for 'device' if it is not already available.
+If *udevd(8)* is not running, then *cryptmount* does not bother to wait
+and this option is a no-op. This also affects the wait time for
+'keydevice' if your key is a block device or a file on a block device.
+
+*-n*::
+
+Dry run, useful with *-v* to see how *cryptsetup* will be called.
+
+*-v*::
+
+Increase verbosity. This prints the commands which are being called (eg:
+*cryptsetup*, *mkswap*).
+
+*-q*::
+
+Decrease verbosity.
+
+*-h*::
+
+Print a short usage message and exit.
+
+*-o* 'options'::
+
+An options list with items such as *swap*, *cipher*, etc. This may be
+given multiple times with a cumulative effect. See *crypttab(5)* for the
+full syntax 'options'.
+
+*-O* 'filters'::
+
+Similar to 'options', this is used to manipulate which 'volumes' are
+used with '-L' and with '-M'/'-U' without arguments. If an option is
+present in 'filters', then the 'volume' in *crypttab* must contain the
+option. For example *-O swap,size* matches all 'volumes' with the *swap*
+option *and* any *size=*'size' option; or *-O swap,size=512* matches
+only those 'volumes' with the *swap* option and specifically *size=512*.
++
+A filter option may also be negated by prefixing it with a *!*. For
+example, *-O swap,!size* includes all 'volumes' with the *swap* option
+but *without* the 'size' option. There is a built-in filter *!noauto*.
++
+Filters are especially useful with *%*'tag' options. For example, *-O
+!%random* can be used to map all 'volumes' which don't use
+*/dev/urandom* for a password and *-O %random* to map the remainder once
+your system's random seed has been restored.
++
+The *-O* option has *no effect* when calling *cryptmount* in a way that
+does not use *crypttab*.
+
+See Also
+--------
+*crypttab*(5), *cryptsetup*(8)
+
+Authors
+-------
+Matt Monaco <dgbaley27@0x01b.net>
