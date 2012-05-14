@@ -1,0 +1,100 @@
+
+encrypt_main() {
+
+	local tmp="$1" name="" dev="" key="${2:--}" opts="" log="" tab="${3:-/etc/crypttab}"
+
+	case "$tmp" in
+		*:*:*)
+			dev="${tmp%%:*}"
+			tmp="${tmp#*:}"
+			name="${tmp%%:*}"
+			opts="${tmp#*:}"
+			;;
+		*:*)
+			dev="${tmp%%:*}"
+			name="${tmp#*:}"
+			;;
+		*)
+			name="$tmp"
+			;;
+	esac
+
+	if [ "$quiet" ]; then
+		log="-q"
+	elif [ "$verbose" ]; then
+		log="-v"
+	fi
+
+	[ -e "/dev/mapper/$name" ] && return
+
+	msg "Mapping encrypted volume '$name'"
+
+	if [ "$dev" ]; then
+		cryptmount $log -O "$opts" -M "$name" "$dev" "$key"
+	else
+		cryptmount -c "$tab" $log -M "$name" 
+	fi
+}
+
+run_hook() {
+
+	local vol vols
+
+	if [ -z "$cryptdevice" ]; then
+		printf "The syntax 'root=%s' where '%s' is an encrypted volume is deprecated" \
+		       "Use 'cryptdevice=%s:root root=/dev/mapper/root instead." \
+		       "$root" "$root" "$root"
+		cryptdevice="$root:root"
+		root="/dev/mapper/root"
+	fi
+
+	encrypt_main "$cryptdevice" "$cryptkey"
+}
+
+run_latehook() {
+
+	if [ "$cryptusr" ]; then
+		encrypt_main "$cryptusr" "$cryptusrkey" "/new_root/etc/crypttab"
+	fi
+	
+	if vols="$(cryptmount -c "/new_root/etc/fstab" -Lq -O "%early")" && [ "$vols" ]; then
+		for vol in $vols; do
+			[ -e "/dev/mapper/$vol" ] && continue
+			msg "Mapping encrypted volume '$vol'"
+			cryptmount -c "/new_root/etc/crypttab" -qM "$vol"
+		done
+	fi
+
+	if [ -z "$cryptusr" ]; then
+		cryptusr="$(encrypt_from_mp "/usr")" || return
+		[ -e "/dev/mapper/$cryptusr" ] && return
+		msg "Detected /usr as '$cryptusr'"
+		encrypt_main "$cryptusr"
+	fi
+}
+
+encrypt_from_mp() {
+	
+	local fstab="/new_root/etc/fstab" ctab="/new_root/etc/crypttab"
+	local line="" mp="$1" dev=""
+
+	[ -f "$fstab" -a -r "$fstab" ] || return 1
+	[ -f "$ctab"  -a -r "$ctab"  ] || return 1
+	[ "$mp" ] || return 1
+
+	if ! dev="$(findmnt -sF "$fstab" -cfno SOURCE -T "$mp")"; then
+		return 1
+	fi
+
+	case "$dev" in
+		/dev/mapper/*)
+			printf "%s" "$(basename "$dev")"
+			return
+			;;
+		*)
+			return 1
+			;;
+	esac
+}
+
+# vim: set ft=sh ts=4 sw=4 noet :

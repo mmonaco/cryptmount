@@ -1,0 +1,56 @@
+build()
+{
+	add_module dm-crypt
+	if [ $CRYPTO_MODULES ]; then
+		add_all_modules $CRYPTO_MODULES
+	else
+		add_all_modules "/crypto/"
+	fi
+
+	add_runscript
+
+	add_binary "cryptmount"
+	add_binary "cryptsetup"
+	add_binary "dmsetup"
+	add_binary "findmnt"
+
+	add_file "/etc/crypttab"
+
+	add_file "/usr/lib/udev/rules.d/10-dm.rules"
+	add_file "/usr/lib/udev/rules.d/13-dm-disk.rules"
+	add_file "/usr/lib/udev/rules.d/95-dm-notify.rules"
+	add_file "/usr/lib/initcpio/udev/11-dm-initramfs.rules" "/lib/udev/rules.d/11-dm-initramfs.rules"
+}
+
+help()
+{
+cat <<_EOF_
+  This hook will _always_ attempt to map an encrypted root device. It will also
+  map an encrypted /usr device and attempt to automatically detect one if not
+  explicitly defined. Finally, it will map all devices in /etc/crypttab that have
+  the "%early" tag. (The %early tag is not necessary for root and /usr).
+
+  The root device is defined with the 'cryptdevice' and 'cryptkey' options. If
+  they are defined as
+
+    cryptdevice=<device>:<name>[:opt1,opt2,...]
+    cryptkey=<device>[[:<fstype>]:<path>]
+
+  then no crypttab is needed and cryptkey has the exact same format and semantics
+  as the key field in crypttab(5). Otherwise, root may be defined as
+
+    cryptdevice=<name>
+
+  where <name> is used to find the volume definition in the crypttab ***which
+  was copied to your initrd during mkinitcpio(8)***. The cryptkey option is
+  ignored.
+
+  For /usr, similar rules apply, using the 'cryptusr' and 'cryptkey' options. If
+  cryptusr is not defined, this hook will attempt to discover the correct volume
+  by looking in fstab (your /usr definition must be for /dev/mapper/<name> for
+  this to work).
+
+_EOF_
+}
+
+# vim: set ft=sh noet :
