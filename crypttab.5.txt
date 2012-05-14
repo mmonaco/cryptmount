@@ -1,0 +1,104 @@
+////
+vim:set ft=asciidoc noet tw=72:
+////
+crypttab(5)
+=============
+
+Name
+----
+crypttab - static information about dm-crypt filesystems
+
+Synopsis
+--------
+/etc/crypttab
+
+Description
+-----------
+The file *crypttab* contains information about encrypted volumes.
+*crypttab* is intended to be read by *cryptmount*, and only written to
+by human administrators. Each 'volume' is described on a separate line
+by four fields. Fields are separated by whitespace. Empty lines and
+lines beginning with a *#* are ignored.
+
+The fields are
+'name' 'device' ['key' ['options']]
+
+'name'::
+
+The name of the 'volume' which will appear at
+*/dev/mapper/*'name'. This must be a plain filename without any
+directory components.
+
+'device'::
+
+An absolute path, UUID, PARTUUID, or LABEL to a device or file which
+will be mapped to */dev/mapper/*'name'.
+
+'key' := *-* | 'keydevice'[\[*:*'fstype'] *:*'keyfile']::
+
+This field may be blank or a *-* for interactive passwords. 'keydevice'
+may be an absolute path, UUID, PARTUUID, or LABEL to a device or file
+which contains the passphrase. If 'keyfile' (and 'fstype') are given,
+'keydevice' will be mounted if it isn't already. 'keyfile' is an
+absolute path relative to the root of the file system on 'keydevice'.
++
+For compatibility with other formats, *ASK* and *none* may be used in
+place of *-* and *SWAP* is an idiom for */dev/urandom* and the *swap*
+option. See *OPTIONS*.
++
+*Note:* A literal password in this field is *not* supported.
+
+'options' := 'key'[*=*'value'] | *%*'tag' | 'options'*,*'options'::
+
+The 'options' field is a comma separated list. It is described in detail
+below.
++
+For compatibility with other formats, if the first character is *-* then
+the entire field is interpretted as a literal command line for
+*cryptsetup*.
+
+Options
+-------
+
+Most options have a one-to-one correspondence to *cryptsetup* command
+line options and are simply reformatted. For example to use *cryptsetup
+--cipher/-c* 'cipher' the options *cipher*='cipher' or *c*='cipher' may
+be used. Other options which are used by *cryptmount* are:
+
+*swap*::
+
+Run *mkswap*(8) on */dev/mapper/*'name'.
+
+*tmp*[='fs']::
+
+Run *mkfs*(8) with the file system type of 'fs' on */dev/mapper/*'name'.
+The default 'fs' is *ext4*.
+
+*noauto*::
+
+Do not automatically map this 'volume'.
+
+*size*='size'::
+
+See *cryptsetup(8) --key-size*. Other formats for *crypttab* use *size*
+for the amount of bytes to read from *key*.
+
+*device-size*='size'::
+
+See *cryptsetup(8) --size*. This accounts for the quirk with *size*.
+
+*%*'tag'::
+
+Tags can be used to include or exclude a group of volumes when running
+*cryptmount(8)*. Additionally, *cryptmount* automatically adds to
+'volumes', with a key of */dev/urandom*, a *%random* tag. This tag is used
+by the Arch Linux initscripts to delay the mapping of these volumes
+until after the random seed has been restored during boot.
+
+See Also
+--------
+*cryptmount*(8), *cryptsetup*(8)
+
+Authors
+-------
+Matt Monaco <dgbaley27@0x01b.net>
