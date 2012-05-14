@@ -341,8 +341,8 @@ ct_unmap() {
 
 ct_map() {
 
-<<<<<<< HEAD
 	local name="$1" dev="$2" key="$3" args="" swap=0
+	local key_dev="" key_fstype="" key_mntpnt="" key_dev_umount=0
 	shift 3
 
 	if [ -e "/dev/mapper/$name" ]; then
@@ -363,8 +363,71 @@ ct_map() {
 		return 1
 	fi
 
+	# parse various key formats
+	case "$key" in
+		*:*:*)
+			key_dev="${key%%:*}"
+			key="${key#*:}"
+			key_fstype="${key%%:*}"
+			key="${key#*:}"
+			;;
+		*:*)
+			key_dev="${key%%:*}"
+			key="${key#*:}"
+			;;
+		""|-)
+			unset key_dev
+			unset key
+			;;
+		*)
+			unset key_dev
+			;;
+	esac
+
+	# resolve any needed key device and mount if necessary
+	if [ "$key_dev" ]; then
+
+		if key_dev="$(ct_resolve_device "$key_dev")"; then
+
+			if key_mntpnt="$(findmnt -cfmnoTARGET "$key_dev")"; then
+
+				key="$key_mntpnt/$key"
+
+			elif key_mntpnt="$(mktemp -d)"; then
+
+				[ -n "$key_fstype" ] && key_fstype="-t $key_fstype"
+
+				if run mount -r $key_fstype "$key_dev" "$key_mntpnt"; then
+					key="$key_mntpnt/$key"
+					key_dev_umount=1
+				else
+					error "unable to mount key device '$key_dev',"
+					error " falling back on interactive password"
+					unset key
+				fi
+			else
+				error "unable to find or create mountpoint for key device,"
+				error " falling back on interactive password"
+				unset key
+			fi
+		else
+			error "key device '$key_dev' not found"
+			error " falling back on interactive password"
+			unset key
+		fi
+
+	elif [ -n "$key" -a "$key" != "-" ]; then
+
+		if ! key="$(ct_resolve_device "$key")"; then
+			error "key '$key' not found"
+			error " falling back on interactive password"
+			unset key
+		fi
+
+	fi
+
 	if [ "$key" ]; then
-		key="--key-file=\"$key\""
+		key=--key-file="$key"
 	fi
 
 	local ret=0
@@ -407,6 +470,15 @@ ct_map() {
 			ret=1
 		fi
 
+	fi
+
+	# clean up after ourselves
+	if [ $key_dev_umount -eq 1 ]; then
+		if ! run umount "$key_dev"; then
+			warn "unable to mount key device '$key_dev'"
+		else
+			run rmdir "$key_mntpnt"
+		fi
 	fi
 
 	return $ret
