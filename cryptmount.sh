@@ -149,6 +149,17 @@ ct_main() {
 		info "udevd not running, or unable to detect it: waiting for devices disabled"
 	fi
 
+	# Pre-parse OPTIONS, a little ugly, but it works
+	preparse() {
+		local args swap
+		if ! ct_parse_options $OPTIONS; then
+			error "Invalid options string: $OPTIONS"
+			exit 1
+		fi
+		OPTIONS="$args"
+	}
+	preparse
+
 	if [ -z "$action" -o "$action" = "list" ]; then
 
 		if [ $# -ne 0 ]; then
@@ -359,6 +370,64 @@ ct_resolve_device() {
 		return 1
 	fi
 }
+
+ct_parse_options() {
+
+	local IFS=',' optlst="$*" opt key val
+
+	for opt in $optlst; do
+
+		# separate key and value
+		unset key val
+		case "$opt" in
+			"")
+				continue;;
+			*=*)
+				key="${opt%%=*}"
+				val="${opt#*=}"
+				[ "$key" = "$val" ] && unset val
+				;;
+			*)
+				key="$opt";;
+		esac
+
+		case "$key" in
+			swap)
+				# set external variable
+				swap=1
+				;;
+			luks|plain)
+				warn "Ignoring option $key, LUKS volumes are automatically detected"
+				;;
+			noauto|%*)
+				:
+				;;
+			skip|precheck|check|checkargs|noearly|loud|keyscript)
+				warn "Ignoring Debian specific option '$key'"
+				;;
+			tmp)
+				warn "The tmp= option is not supported"
+				;;
+			size)
+				args="$args --key-size $val"
+				;;
+			device-size)
+				args="$args --size $val"
+				;;
+			*)
+				if [ ${#key} -eq 1 ]; then
+					args="$args -$key $val"
+				else
+					args="$args --$key $val"
+				fi
+				;;
+		esac
+
+	done
+
+	return 0
+}
+
 #                                                                              #
 # ---------------------------------------------------------------------------- #
 
