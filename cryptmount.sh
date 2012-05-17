@@ -373,7 +373,7 @@ ct_resolve_device() {
 
 ct_parse_options() {
 
-	local IFS=',' optlst="$*" opt key val
+	local IFS=',' optlst="$*" opt key val depr=0
 
 	for opt in $optlst; do
 
@@ -382,6 +382,17 @@ ct_parse_options() {
 		case "$opt" in
 			"")
 				continue;;
+			-*)
+				if [ $depr -eq 0 ]; then
+					info "You are using a deprecated format for the options field. The entire"
+					info " field will be passed directly to cryptsetup. Please use the more"
+					info " standardized comma-deliminated options list instead. This format"
+					info " will be removed in a future version of cryptmount/crypttab!"
+					depr=1
+				fi
+				args="$args $opt"
+				continue
+				;;
 			*=*)
 				key="${opt%%=*}"
 				val="${opt#*=}"
