@@ -299,7 +299,7 @@ ct_read_crypttab() {
 			-|none|"")
 				key=-
 				;;
-			/dev/random|/dev/urandom)
+			/dev/random|/dev/urandom|/dev/hw_random)
 				options="$options,%random"
 				;;
 			ASK)
