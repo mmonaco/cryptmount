@@ -656,6 +656,9 @@ ct_parse_options() {
 			device-size)
 				args="$args --size $val"
 				;;
+			none)
+				args=
+				;;
 			*)
 				if [ ${#key} -eq 1 ]; then
 					args="$args -$key $val"
