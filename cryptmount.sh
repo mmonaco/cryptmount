@@ -1,7 +1,7 @@
 #!/bin/sh
 
 SHORTOPTS="LMUc:fw:nqvho:O:"
-DEPS="cryptsetup blkid findmnt mkswap mktemp"
+DEPS="cryptsetup blkid mkswap mktemp"
 UDEVRUNNING=0
 
 LOGLEVEL=1
@@ -91,6 +91,16 @@ run() {
 trim() {
 	local IFS=$' \t\n'
 	echo -n $*
+}
+
+get_mount() {
+	if type findmnt &> /dev/null ; then
+		findmnt -cfmnoTARGET "$1"
+	else
+		cat /proc/self/mountinfo | \
+		awk -v dev="$1" \
+		'{ for(i=7;$i!="-";$i++); if($(i+2)==dev&&$4=="/"){print $5;r=1;exit}} END {exit !r}'
+	fi
 }
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ #
@@ -452,7 +462,7 @@ ct_map() {
 
 		if key_dev="$(ct_resolve_device "$key_dev")"; then
 
-			if key_mntpnt="$(findmnt -cfmnoTARGET "$key_dev")"; then
+			if key_mntpnt="$(get_mount "$key_dev")"; then
 
 				key="$key_mntpnt/$key"
 
